@@ -17,7 +17,7 @@ async function initPopup() {
   currentURL = tab?.url || '';
   document.getElementById('current-url').textContent = currentURL || 'Unknown';
 
-  // Check auth status
+  // Check auth status from chrome.storage.local first
   await checkAuthStatus();
 
   // Bind scan button
@@ -37,21 +37,44 @@ async function initPopup() {
     e.preventDefault();
     chrome.tabs.create({ url: `${APP_BASE_URL}/login` });
   });
+
+  // Bind logout link if it exists
+  const logoutLink = document.getElementById('logout-link');
+  if (logoutLink) {
+    logoutLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      handleLogout();
+    });
+  }
 }
 
 async function checkAuthStatus() {
   return new Promise((resolve) => {
     chrome.storage.local.get(['authToken', 'userName'], (result) => {
       const badge = document.getElementById('auth-status');
+      const loginLink = document.getElementById('login-link');
+      const logoutLink = document.getElementById('logout-link');
+
       if (result.authToken) {
         badge.textContent = result.userName ? `Hi, ${result.userName}` : 'Logged in';
         badge.className = 'auth-badge auth-badge--logged-in';
+        if (loginLink) loginLink.style.display = 'none';
+        if (logoutLink) logoutLink.style.display = 'inline';
       } else {
         badge.textContent = 'Not logged in';
         badge.className = 'auth-badge auth-badge--guest';
+        if (loginLink) loginLink.style.display = 'inline';
+        if (logoutLink) logoutLink.style.display = 'none';
       }
       resolve(result.authToken);
     });
+  });
+}
+
+function handleLogout() {
+  chrome.storage.local.remove(['authToken', 'userName'], () => {
+    chrome.runtime.sendMessage({ type: 'LOGOUT' });
+    checkAuthStatus();
   });
 }
 

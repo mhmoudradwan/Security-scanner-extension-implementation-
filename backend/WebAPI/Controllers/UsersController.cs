@@ -15,12 +15,14 @@ public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly IAuthService _authService;
+    private readonly IFileService _fileService;
     private readonly ILogger<UsersController> _logger;
 
-    public UsersController(IUserService userService, IAuthService authService, ILogger<UsersController> logger)
+    public UsersController(IUserService userService, IAuthService authService, IFileService fileService, ILogger<UsersController> logger)
     {
         _userService = userService;
         _authService = authService;
+        _fileService = fileService;
         _logger = logger;
     }
 
@@ -131,6 +133,89 @@ public class UsersController : ControllerBase
                 Message = ex.Message
             });
         }
+    }
+
+    /// <summary>
+    /// Upload profile picture
+    /// </summary>
+    [HttpPost("profile-picture")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ResponseDto<string>>> UploadProfilePicture(IFormFile file)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var url = await _fileService.UploadProfilePictureAsync(userId, file);
+
+            return Ok(new ResponseDto<string>
+            {
+                Success = true,
+                Message = "Profile picture uploaded successfully",
+                Data = url
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ResponseDto<string>
+            {
+                Success = false,
+                Message = ex.Message
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upload profile picture");
+            return BadRequest(new ResponseDto<string>
+            {
+                Success = false,
+                Message = "Failed to upload profile picture. Please try again."
+            });
+        }
+    }
+
+    /// <summary>
+    /// Delete profile picture
+    /// </summary>
+    [HttpDelete("profile-picture")]
+    public async Task<ActionResult<ResponseDto<object>>> DeleteProfilePicture()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            await _fileService.DeleteProfilePictureAsync(userId);
+
+            return Ok(new ResponseDto<object>
+            {
+                Success = true,
+                Message = "Profile picture deleted successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete profile picture");
+            return BadRequest(new ResponseDto<object>
+            {
+                Success = false,
+                Message = "Failed to delete profile picture. Please try again."
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get profile picture URL
+    /// </summary>
+    [HttpGet("profile-picture")]
+    public async Task<ActionResult<ResponseDto<string>>> GetProfilePicture()
+    {
+        var userId = GetCurrentUserId();
+        var url = await _fileService.GetProfilePictureAsync(userId);
+
+        return Ok(new ResponseDto<string>
+        {
+            Success = true,
+            Message = url != null ? "Profile picture found" : "No profile picture",
+            Data = url
+        });
     }
 
     private int GetCurrentUserId()

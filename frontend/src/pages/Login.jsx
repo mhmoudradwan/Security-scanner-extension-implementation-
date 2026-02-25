@@ -72,9 +72,11 @@ function Login(){
                         const extensionId = "cfcnlbhngnjogcaofelchahdfejjcdei";
 
                         chrome.runtime.sendMessage(extensionId, {
-                            type: "AUTH_TOKEN",
-                            token: response.data,
-                            userName: username
+                            type: "LOGIN_SUCCESS",
+                            payload: {
+                                token: response.data,
+                                user: { username }
+                            }
                         });
 
                         console.log("Token sent to extension");
