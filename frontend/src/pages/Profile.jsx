@@ -63,19 +63,64 @@ function Profile() {
       });
   }, []);
 
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
   // Handle image upload
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarImage(reader.result);
-        localStorage.setItem("userAvatar", reader.result);
-        setUserData(prev => ({ ...prev, avatar: reader.result }));
-        // Persist to backend
-        authApi.updateProfile({ profileImageUrl: reader.result }).catch(() => {});
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Client-side validation
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError("Invalid file type. Allowed: jpg, jpeg, png, gif");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("File size exceeds 5MB limit");
+      return;
+    }
+
+    setUploadError("");
+    setUploadLoading(true);
+
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onloadend = () => setAvatarImage(reader.result);
+    reader.readAsDataURL(file);
+
+    try {
+      const res = await authApi.uploadProfilePicture(file);
+      if (res.success && res.data) {
+        const url = res.data;
+        setAvatarImage(url);
+        localStorage.setItem("userAvatar", url);
+        setUserData(prev => ({ ...prev, avatar: url }));
+      }
+    } catch (err) {
+      setUploadError("Failed to upload profile picture. Please try again.");
+      // Revert preview on error
+      const storedAvatar = localStorage.getItem("userAvatar") || PLACEHOLDER_AVATAR;
+      setAvatarImage(storedAvatar);
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  const handleDeletePicture = async () => {
+    setUploadError("");
+    setDeleteLoading(true);
+    try {
+      await authApi.deleteProfilePicture();
+      setAvatarImage(PLACEHOLDER_AVATAR);
+      localStorage.removeItem("userAvatar");
+      setUserData(prev => ({ ...prev, avatar: PLACEHOLDER_AVATAR }));
+    } catch (err) {
+      setUploadError("Failed to delete profile picture. Please try again.");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -103,22 +148,47 @@ function Profile() {
               <input 
                 type="file" 
                 id="avatar-upload" 
-                accept="image/*" 
+                accept="image/jpeg,image/png,image/gif"
                 onChange={handleImageUpload}
                 style={{display: 'none'}}
+                disabled={uploadLoading}
               />
               <label 
                 htmlFor="avatar-upload" 
                 className="avatar-upload-btn"
-                title="Change profile picture"
+                title={uploadLoading ? "Uploading..." : "Change profile picture"}
               >
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10 4.16669V15.8334" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M4.16699 10H15.8337" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                {uploadLoading ? (
+                  <span style={{fontSize: "10px"}}>...</span>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 4.16669V15.8334" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M4.16699 10H15.8337" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
               </label>
-    
             </div>
+            {uploadError && (
+              <p style={{color: '#ff6467', fontSize: '13px', marginTop: '8px', textAlign: 'center'}}>{uploadError}</p>
+            )}
+            {avatarImage !== PLACEHOLDER_AVATAR && (
+              <button
+                onClick={handleDeletePicture}
+                disabled={deleteLoading}
+                style={{
+                  marginTop: '8px',
+                  background: 'none',
+                  border: '1px solid #ff6467',
+                  color: '#ff6467',
+                  borderRadius: '6px',
+                  padding: '4px 12px',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                {deleteLoading ? "Removing..." : "Remove Picture"}
+              </button>
+            )}
           </div>
 
           {/* User Info */}

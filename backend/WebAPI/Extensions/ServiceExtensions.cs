@@ -34,6 +34,7 @@ public static class ServiceExtensions
         services.AddScoped<IScanRepository, ScanRepository>();
         services.AddScoped<IVulnerabilityRepository, VulnerabilityRepository>();
         services.AddScoped<IReportRepository, ReportRepository>();
+        services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
         services.AddScoped(typeof(IRepository<>), typeof(GenericRepository<>));
 
         // Services
@@ -41,6 +42,9 @@ public static class ServiceExtensions
         services.AddScoped<IScansService, ScansService>();
         services.AddScoped<IReportsService, ReportsService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<Application.Interfaces.IEmailService, Application.Services.EmailService>();
+        services.AddScoped<Application.Interfaces.IPasswordResetService, Application.Services.PasswordResetService>();
+        services.AddScoped<Application.Interfaces.IFileService, Application.Services.FileService>();
 
         return services;
     }
