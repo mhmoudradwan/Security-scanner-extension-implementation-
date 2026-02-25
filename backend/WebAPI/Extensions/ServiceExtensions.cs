@@ -136,7 +136,19 @@ public static class ServiceExtensions
         {
             options.AddPolicy("AllowAll", builder =>
             {
-                builder.WithOrigins(allowedOrigins)
+                builder.SetIsOriginAllowed(origin =>
+                       {
+                           try
+                           {
+                               var uri = new Uri(origin);
+                               if (uri.Scheme == "chrome-extension") return true;
+                               return allowedOrigins.Contains(origin);
+                           }
+                           catch
+                           {
+                               return false;
+                           }
+                       })
                        .AllowAnyMethod()
                        .AllowAnyHeader()
                        .AllowCredentials();

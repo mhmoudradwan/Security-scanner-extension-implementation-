@@ -297,6 +297,8 @@ function Profile() {
                 localStorage.removeItem('baseeraUserName');
                 localStorage.removeItem('baseeraUserData');
                 localStorage.removeItem('userAvatar');
+                // Dispatch event for Chrome Extension content script
+                window.dispatchEvent(new CustomEvent('baseeraAuthLogout'));
                 navigate('/login');
               }}
             >

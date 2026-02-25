@@ -66,6 +66,11 @@ function Login(){
                     localStorage.setItem("baseeraUserName", username);
                 }
 
+                // ✅ Dispatch event for Chrome Extension content script
+                window.dispatchEvent(new CustomEvent('baseeraAuthLogin', {
+                    detail: { token: response.data, user: { username } }
+                }));
+
                 // ✅ Send token to Chrome Extension
                 if (window.chrome && chrome.runtime && chrome.runtime.sendMessage) {
                     try {
